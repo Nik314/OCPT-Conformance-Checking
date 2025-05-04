@@ -15,12 +15,22 @@ for file_name in os.listdir("data"):
     ocpt = df2_miner_apply("data/"+file_name)
     ocpn = convert_ocpt_to_ocpn(ocpt)
     print("Model Mined & Translated")
-    budget = 60
+    budget = 3600
+
 
     try:
         log = pm4py.read_ocel2("data/"+file_name)
     except:
         log = pm4py.read_ocel("data/"+file_name)
+
+    from src.conformance import determine_conformance
+    start = time.time()
+    timeouts = determine_conformance(ocpt,log.relations,(start+budget))
+    runtime_me = min(time.time() -start,budget)
+    timeout_me = timeouts
+    print("Abstraction-Based Done In "+str(runtime_me) +" Seconds With Timeout On " +str(timeout_me) +" Of Events")
+
+
 
     pm4py.write_ocel_json(log,"temp/"+file_name.split(".")[0] +".jsonocel")
     defacto_ocel = factory.apply("temp/"+file_name.split(".")[0] +".jsonocel")
@@ -28,7 +38,7 @@ for file_name in os.listdir("data"):
     timeouts = calculate_oc_alignments(defacto_ocel, ocpn,start+budget)
     runtime_liss = min(time.time() -start,budget)
     timeout_liss = timeouts
-    print("Perspective-Based Done In "+str(runtime_liss) +" Seconds With Timeout On " +str(runtime_liss) +" Of Events")
+    print("Perspective-Based Done In "+str(runtime_liss) +" Seconds With Timeout On " +str(timeout_liss) +" Of Executions")
 
 
     from park.conformance import determine_conformance

@@ -19,8 +19,10 @@ def get_interaction_patterns(relations):
 
     for activity in relations["ocel:activity"].unique():
         sub_relations = relations[relations["ocel:activity"] == activity]
+
         for object_type in relations["ocel:type"].unique():
             sub_sub_relations = sub_relations[sub_relations["ocel:type"] == object_type]
+
             if sub_sub_relations["ocel:eid"].nunique() != sub_relations["ocel:eid"].nunique():
                 if not sub_sub_relations["ocel:eid"].nunique() > 0:
                     related_object_types[activity].remove(object_type)

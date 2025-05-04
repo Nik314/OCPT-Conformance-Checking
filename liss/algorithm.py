@@ -495,7 +495,6 @@ def create_synchronous_product_net(px_net: ObjectCentricPetriNet,
 
 def alignment_from_dijkstra(visited: Dict[FrozenMarking, DijkstraInfo], end_marking):
     move_stack = []
-
     current_marking = end_marking
     dij_info = visited[current_marking]
     while dij_info.previous_marking is not None:
@@ -731,7 +730,7 @@ def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_ma
         # update the previous marking and the move as well in table
         visited[selected_marking] = reachable[selected_marking]
         del reachable[selected_marking]
-        alignment_so_far = alignment_from_dijkstra(visited, selected_marking)
+        #alignment_so_far = alignment_from_dijkstra(visited, selected_marking)
         #print(f"Selected had {len(alignment_so_far.moves)}")
         #print(f"Log  : {[move.log_move for move in alignment_so_far.moves]}")
         #print(f"Model: {[move.model_move for move in alignment_so_far.moves]}")
@@ -750,6 +749,9 @@ def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_ma
         # [ transition, binding, move, resulting_marking for transition, binding, move, resulting_marking in valid_bindings if move.model_move == "Goods Issue"]
         # for each binding calculate the resulting marking and cost of firing
         # if cost to selected marking + cost for firing binding is lower than previous distance, update cost
+        if time.time() > timeout:
+            break
+
         for transition, binding, move, resulting_marking in valid_bindings:
             sync_found = False
             if move == None:
@@ -776,7 +778,10 @@ def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_ma
                         #print(f"Sync Cost was: {selected_dij_info.cost + move.cost} - was in so update")
                         pass
 
+    if not fin_marking in visited.keys():
+        return None
     alignment = alignment_from_dijkstra(visited, fin_marking)
+
     #print(f"Final State found with cost: {alignment.get_cost()}")
     #print(f"Log  : {[move.log_move for move in alignment_so_far.moves]}")
     #print(f"Model: {[move.model_move for move in alignment_so_far.moves]}")
@@ -821,7 +826,7 @@ def calculate_oc_alignments(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet,timeo
         ocpn = copy.deepcopy(extern_ocpn)
         #ocpn_vis_factory.save(ocpn_vis_factory.apply(ocpn), "post_deepcopy_net.png")
 
-        count = ocel.variants_dict[variant_id]
+        count = len(ocel.variants_dict[variant_id])
         indirect_id = ocel.variants_dict[variant_id][0]  # XXX Check before that it is not empty
         process_execution = ocel.process_executions[indirect_id]
 
@@ -852,6 +857,8 @@ def calculate_oc_alignments(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet,timeo
         #print(sync_final_marking)
         # Search for shortest path in Synchronous Product Net
         alignment_for_variant = dijkstra(sync_pn, sync_initial_marking, sync_final_marking,timeout)
+        if not alignment_for_variant:
+            break
         alignment_for_variant.add_object_types(ocel.process_execution_objects[indirect_id])
         alignment_dict[variant_id] = alignment_for_variant
         #print("Process execution aligned!")
