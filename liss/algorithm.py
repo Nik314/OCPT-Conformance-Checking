@@ -1,3 +1,5 @@
+import time
+
 import liss.localocpa
 import liss.helperfunctions
 from liss.helperfunctions import FrozenMarking
@@ -686,7 +688,7 @@ def all_valid_bindings(pn: ObjectCentricPetriNet, current_marking: FrozenMarking
     return all_val_bindings
 
 
-def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_marking: FrozenMarking) -> Alignment:
+def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_marking: FrozenMarking,timeout) -> Alignment:
     if not isinstance(ini_marking, FrozenMarking):
         Exception("ini_marking is not of type FrozenMarking")
     if not isinstance(fin_marking, FrozenMarking):
@@ -704,6 +706,10 @@ def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_ma
 
     # while final marking not yet visited:
     while fin_marking not in visited.keys():
+
+        if time.time() > timeout:
+            break
+
         if not reachable.keys():
             raise Exception("Dijkstra did not find a shortest path. Algorithmic error.")
         # select the reachable unvisited marking with the lowest cost
@@ -777,7 +783,7 @@ def dijkstra(sync_net: ObjectCentricPetriNet, ini_marking: FrozenMarking, fin_ma
     return alignment
 
 
-def calculate_oc_alignments(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet, date_format='%Y-%m-%d %H:%M:%S%z') -> Dict[str, Alignment]:
+def calculate_oc_alignments(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet,timeout, date_format='%Y-%m-%d %H:%M:%S%z') -> Dict[str, Alignment]:
     # XXX ToDo Remove once the helper functions are gone
     transition_to_move_map = dict()
     global_trans_properties_key = []
@@ -804,36 +810,53 @@ def calculate_oc_alignments(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet, date
     # For each variant use a process execution in the log to calculate an individual alignment
     alignment_dict = dict()
     # laufvariable = 0
+    done_exeuctions = 0
+    total_execution = len(ocel.process_executions)
+
     for variant_id in ocel.variants:
+
+        if time.time() > timeout:
+            break
+
         ocpn = copy.deepcopy(extern_ocpn)
         #ocpn_vis_factory.save(ocpn_vis_factory.apply(ocpn), "post_deepcopy_net.png")
 
+        count = ocel.variants_dict[variant_id]
         indirect_id = ocel.variants_dict[variant_id][0]  # XXX Check before that it is not empty
         process_execution = ocel.process_executions[indirect_id]
 
         # Each process execution is a list of event ids
         # Create Event Net
         px_net, px_initial_marking_list, px_final_marking_list = process_execution_net_from_process_execution(ocel,
-                                                                                                              indirect_id,
-                                                                                                              process_execution, date_format)
+                indirect_id,  process_execution, date_format)
         #ocpn_vis_factory.save(ocpn_vis_factory.apply(px_net), "px_net.png")
         # Preprocessing of ocpn to remove variable arcs
+        if time.time() > timeout:
+            break
+
         dejure_initial_marking_list, dejure_final_marking_list = preprocessing_dejure_net(ocel, indirect_id, ocpn)
         # Create Synchronous Product Net
+        if time.time() > timeout:
+            break
+
         sync_pn, sync_initial_marking, sync_final_marking = create_synchronous_product_net(px_net,
                                                                                            px_initial_marking_list,
                                                                                            px_final_marking_list, ocpn,
                                                                                            dejure_initial_marking_list,
                                                                                            dejure_final_marking_list)
+
+        if time.time() > timeout:
+            break
         #ocpn_vis_factory.save(ocpn_vis_factory.apply(sync_pn), "synchronous_product_net.png")
         #print(sync_initial_marking)
         #print(sync_final_marking)
         # Search for shortest path in Synchronous Product Net
-        alignment_for_variant = dijkstra(sync_pn, sync_initial_marking, sync_final_marking)
+        alignment_for_variant = dijkstra(sync_pn, sync_initial_marking, sync_final_marking,timeout)
         alignment_for_variant.add_object_types(ocel.process_execution_objects[indirect_id])
         alignment_dict[variant_id] = alignment_for_variant
         #print("Process execution aligned!")
-    return alignment_dict
+        done_exeuctions += count
+    return 1 - (done_exeuctions / total_execution)
 
 def calculate_oc_alignment_given_variant_id(ocel: OCEL, extern_ocpn: ObjectCentricPetriNet, variant_id, date_format='%Y-%m-%d %H:%M:%S%z') -> Dict[str, Alignment]:
     # For each variant use a process execution in the log to calculate an individual alignment

@@ -19,7 +19,7 @@ class JsonParseParameters(object):
         self.log_params = {'attr_names': 'ocel:attribute-names',
                            'obj_types': 'ocel:object-types',
                            'ordering': 'ocel:ordering',
-                           'events': 'events',
+                           'events': 'ocel:events',
                            'objects': 'ocel:objects',
                            'meta': 'ocel:global-log'}
 

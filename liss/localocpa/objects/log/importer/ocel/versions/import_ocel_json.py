@@ -51,7 +51,7 @@ def parse_json(data: Dict[str, Any]) -> ObjectCentricEventLog:
     cfg = JsonParseParameters()
     # parses the given dict
     events = parse_events(data[cfg.log_params['events']], cfg)
-    objects = parse_objects(data["objects"], cfg)
+    objects = parse_objects(data[cfg.log_params['objects']], cfg)
     # Uses the last found value type
     attr_events = {v:
                    str(type(events[eid].vmap[v])) for eid in events
@@ -72,8 +72,9 @@ def parse_json(data: Dict[str, Any]) -> ObjectCentricEventLog:
             act_attr[act] = act_attr[act].union({v for v in event.vmap})
     for act in act_attr:
         act_attr[act] = list(act_attr[act])
-    meta = MetaObjectCentricData(attr_names=[],
-                                 obj_types=data["objectTypes"],
+    meta = MetaObjectCentricData(attr_names=data[cfg.log_params['meta']][cfg.log_params['attr_names']],
+                                 obj_types=data[cfg.log_params['meta']
+                                                ][cfg.log_params['obj_types']],
                                  attr_types=attr_types,
                                  attr_typ=attr_typ,
                                  act_attr=act_attr,
@@ -90,19 +91,18 @@ def parse_events(data: Dict[str, Any], cfg: JsonParseParameters) -> Dict[str, Ev
     vmap_name = cfg.event_params['vmap']
     time_name = cfg.event_params['time']
     events = {}
-    for item in data:
-        print(item)
-        events[item["id"]] = Event(id=item["id"],
-                                act=item["type"],
-                                omap=item["relationships"],
-                                vmap ={},
-                                time=datetime.fromisoformat(item["time"]))
-        if "start_timestamp" not in {}:
-            events[item["id"]].vmap["start_timestamp"] = datetime.fromisoformat(
-                item["time"])
+    for item in data.items():
+        events[item[0]] = Event(id=item[0],
+                                act=item[1][act_name],
+                                omap=item[1][omap_name],
+                                vmap=item[1][vmap_name],
+                                time=datetime.fromisoformat(item[1][time_name]))
+        if "start_timestamp" not in item[1][vmap_name]:
+            events[item[0]].vmap["start_timestamp"] = datetime.fromisoformat(
+                item[1][time_name])
         else:
-            events[item["id"]].vmap["start_timestamp"] = datetime.fromisoformat(
-                events[item["id"]].vmap["start_timestamp"])
+            events[item[0]].vmap["start_timestamp"] = datetime.fromisoformat(
+                events[item[0]].vmap["start_timestamp"])
     sorted_events = sorted(events.items(), key=lambda kv: kv[1].time)
     return OrderedDict(sorted_events)
 
@@ -111,8 +111,8 @@ def parse_objects(data: Dict[str, Any], cfg: JsonParseParameters) -> Dict[str, O
     # Transform objects dict to list of objects
     type_name = cfg.obj_params['type']
     ovmap_name = cfg.obj_params['ovmap']
-    objects = {item["id"]: Obj(id=item["id"],
-                            type=item["type"],
-                            ovmap=[])
-               for item in data}
+    objects = {item[0]: Obj(id=item[0],
+                            type=item[1][type_name],
+                            ovmap=item[1][ovmap_name])
+               for item in data.items()}
     return objects
