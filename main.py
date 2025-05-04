@@ -2,62 +2,121 @@ import os
 import pandas
 import pm4py
 import time
+
+from pm4py.algo.transformation.log_to_features.variants.trace_based import times_from_first_occurrence_activity_case
+
 import liss.localocpa.objects.log.importer.ocel.factory as factory
 from src import df2_miner_apply, convert_ocpt_to_ocpn
 from liss.main import *
 
-result = pandas.DataFrame(columns=["Log", "align_time","align_percent","context_time","context_percent",
-                "perspective_time","perspective_percent","abstraction_time"])
 
-for file_name in os.listdir("data"):
+def run_abstractions(budget):
+    result = pandas.DataFrame(columns=["log", "time","percentage"])
+    for file_name in os.listdir("data"):
 
-    print(file_name)
-    ocpt = df2_miner_apply("data/"+file_name)
-    ocpn = convert_ocpt_to_ocpn(ocpt)
-    print("Model Mined & Translated")
-    budget = 3600
+        print(file_name)
+        ocpt = df2_miner_apply("data/"+file_name)
+        ocpn = convert_ocpt_to_ocpn(ocpt)
+        print("Model Mined & Translated")
 
+        try:
+            log = pm4py.read_ocel2("data/"+file_name)
+        except:
+            log = pm4py.read_ocel("data/"+file_name)
 
-    try:
-        log = pm4py.read_ocel2("data/"+file_name)
-    except:
-        log = pm4py.read_ocel("data/"+file_name)
-
-    from src.conformance import determine_conformance
-    start = time.time()
-    timeouts = determine_conformance(ocpt,log.relations,(start+budget))
-    runtime_me = min(time.time() -start,budget)
-    timeout_me = timeouts
-    print("Abstraction-Based Done In "+str(runtime_me) +" Seconds With Timeout On " +str(timeout_me) +" Of Events")
-
-
-
-    pm4py.write_ocel_json(log,"temp/"+file_name.split(".")[0] +".jsonocel")
-    defacto_ocel = factory.apply("temp/"+file_name.split(".")[0] +".jsonocel")
-    start = time.time()
-    timeouts = calculate_oc_alignments(defacto_ocel, ocpn,start+budget)
-    runtime_liss = min(time.time() -start,budget)
-    timeout_liss = timeouts
-    print("Perspective-Based Done In "+str(runtime_liss) +" Seconds With Timeout On " +str(timeout_liss) +" Of Executions")
+        from src.conformance import determine_conformance
+        start = time.time()
+        timeouts = determine_conformance(ocpt,log.relations,(start+budget))
+        runtime_me = min(time.time() -start,budget)
+        timeout_me = timeouts
+        print("Abstraction-Based Done In "+str(runtime_me) +" Seconds With Timeout On " +str(timeout_me) +" Of Events")
+        result.loc[result.shape[0]] = file_name,runtime_me,timeout_me
+    result.to_csv("result_abstraction.csv")
 
 
-    from park.conformance import determine_conformance
-    start = time.time()
-    timeouts = determine_conformance(ocpn,log.relations,(start+budget))
-    runtime_park = min(time.time() -start,budget)
-    timeout_park = timeouts
-    print("Perspective-Based Done In "+str(runtime_park) +" Seconds With Timeout On " +str(timeout_park) +" Of Events")
+def run_perspective(budget):
 
-    from adams.conformance import determine_conformance
-    start = time.time()
-    timeouts = determine_conformance(ocpn,log.relations,(start+budget))
-    runtime_adams = min(time.time() -start,budget)
-    timeout_adams = timeouts
-    print("Context-Based Done In "+str(runtime_adams) +" Seconds With Timeout On " +str(timeout_adams) +" Of Events")
+    result = pandas.DataFrame(columns=["log", "time", "percentage"])
+    for file_name in os.listdir("data"):
+
+        print(file_name)
+        ocpt = df2_miner_apply("data/" + file_name)
+        ocpn = convert_ocpt_to_ocpn(ocpt)
+        print("Model Mined & Translated")
+
+        try:
+            log = pm4py.read_ocel2("data/" + file_name)
+        except:
+            log = pm4py.read_ocel("data/" + file_name)
+
+        from park.conformance import determine_conformance
+        start = time.time()
+        timeouts = determine_conformance(ocpn,log.relations,(start+budget))
+        runtime_park = min(time.time() -start,budget)
+        timeout_park = timeouts
+        print("Perspective-Based Done In "+str(runtime_park) +" Seconds With Timeout On " +str(timeout_park) +" Of Events")
+        result.loc[result.shape[0]] = file_name,runtime_park,timeout_park
+    result.to_csv("result_perspective.csv")
 
 
-    continue
 
-#result.to_csv("results.csv")
+def run_context(budget):
+
+    result = pandas.DataFrame(columns=["log", "time", "percentage"])
+    for file_name in os.listdir("data"):
+
+        print(file_name)
+        ocpt = df2_miner_apply("data/" + file_name)
+        ocpn = convert_ocpt_to_ocpn(ocpt)
+        print("Model Mined & Translated")
+
+        try:
+            log = pm4py.read_ocel2("data/" + file_name)
+        except:
+            log = pm4py.read_ocel("data/" + file_name)
+
+        from adams.conformance import determine_conformance
+        start = time.time()
+        timeouts = determine_conformance(ocpn,log.relations,(start+budget))
+        runtime_adams = min(time.time() -start,budget)
+        timeout_adams = timeouts
+        print("Context-Based Done In "+str(runtime_adams) +" Seconds With Timeout On " +str(timeout_adams) +" Of Events")
+        result.loc[result.shape[0]] = file_name,runtime_adams,timeout_adams
+    result.to_csv("result_context.csv")
+
+
+
+
+def run_alignment(budget):
+
+    result = pandas.DataFrame(columns=["log", "time", "percentage"])
+    for file_name in os.listdir("data"):
+
+        print(file_name)
+        ocpt = df2_miner_apply("data/" + file_name)
+        ocpn = convert_ocpt_to_ocpn(ocpt)
+        print("Model Mined & Translated")
+
+        try:
+            log = pm4py.read_ocel2("data/" + file_name)
+        except:
+            log = pm4py.read_ocel("data/" + file_name)
+
+        pm4py.write_ocel_json(log,"temp/"+file_name.split(".")[0] +".jsonocel")
+        defacto_ocel = factory.apply("temp/"+file_name.split(".")[0] +".jsonocel")
+        start = time.time()
+        timeouts = calculate_oc_alignments(defacto_ocel, ocpn,start+budget)
+        runtime_liss = min(time.time() -start,budget)
+        timeout_liss = timeouts
+        print("Alignment-Based Done In "+str(runtime_liss) +" Seconds With Timeout On " +str(timeout_liss) +" Of Executions")
+        result.loc[result.shape[0]] = file_name,runtime_liss,timeout_liss
+    result.to_csv("result_alignment.csv")
+
+
+budget = 3600
+run_abstractions(budget)
+run_perspective(budget)
+run_context(budget)
+run_alignment(budget)
 
 

@@ -10,8 +10,6 @@ def get_tree_abstraction(tree):
     return dfgs,rel,div,con,defi,opt
 
 
-
-
 def search_leaf_path(tree,a):
     if isinstance(tree,OperatorNode):
         for sub in tree.subtrees:
