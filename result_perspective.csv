@@ -1,0 +1,14 @@
+,log,time,percentage
+0,01_ocel_standard_p2p.json,27.467141151428223,0.0
+1,02_ocel_standard_order_management.json,206.85859560966492,0.0
+2,03_ocel_standard_container_logistics.json,30.765223503112793,0.0
+3,04_ocel_lrms_o2c.xml,5.572499513626099,0.0
+4,05_ocel_lrms_p2p.xml,7.726778030395508,0.0
+5,06_ocel_lrms_hr.xml,0.7652673721313477,0.0
+6,07_ocel_lrms_hospital.xml,38.669641971588135,0.0
+7,08_ocel_standard_hinge.xml,None,None
+8,09_ocel_legacy_github_pm4py.jsonocel,677.6637661457062,0.0
+9,10_ocel_legacy_recruiting.jsonocel,9.44440507888794,0.0
+
+
+

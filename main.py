@@ -54,7 +54,7 @@ def run_perspective(budget):
         timeouts = determine_conformance(ocpn,log.relations,(start+budget))
         runtime_park = min(time.time() -start,budget)
         timeout_park = timeouts
-        print("Perspective-Based Done In "+str(runtime_park) +" Seconds With Timeout On " +str(timeout_park) +" Of Events")
+        print("Perspective-Based Done In "+str(runtime_park) +" Seconds With Timeout On " +str(timeout_park) +" Of Objects")
         result.loc[result.shape[0]] = file_name,runtime_park,timeout_park
     result.to_csv("result_perspective.csv")
 
@@ -110,13 +110,13 @@ def run_alignment(budget):
         timeout_liss = timeouts
         print("Alignment-Based Done In "+str(runtime_liss) +" Seconds With Timeout On " +str(timeout_liss) +" Of Executions")
         result.loc[result.shape[0]] = file_name,runtime_liss,timeout_liss
-    result.to_csv("result_alignment.csv")
+        result.to_csv("result_alignment.csv")
 
 
 budget = 3600
-run_abstractions(budget)
-run_perspective(budget)
-run_context(budget)
+#run_abstractions(budget)
+#run_perspective(budget)
+#run_context(budget)
 run_alignment(budget)
 
 

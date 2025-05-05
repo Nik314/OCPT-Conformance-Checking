@@ -314,9 +314,9 @@ def determine_conformance(ocpn, relations,timeout):
             for hash_value, cardinality in unique_cardinalities.items()]
 
     for entry in inputs:
-        hash_to_conformance.update(replay_single_cardinality(*entry))
         if time.time() > timeout:
             break
+        hash_to_conformance.update(replay_single_cardinality(*entry))
 
     for context in event_to_context_map.values():
         if not hash_context(context) in hash_to_conformance:
