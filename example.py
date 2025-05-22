@@ -1,5 +1,8 @@
 import pandas
 import datetime
+
+import pm4py
+
 from src.log_abstraction import get_log_abstraction
 from src.oc_process_trees import OperatorNode,LeafNode,Operator
 from src.tree_abstraction import get_tree_abstraction
@@ -42,20 +45,25 @@ ocpt = OperatorNode(Operator.SEQUENCE,[
 
 print(str(ocpt))
 
+print("Log Abstraction")
 dfgs,rel,div,con,defi,opt = get_log_abstraction(relations)
 print(rel)
 print(div)
 print(con)
 print(defi)
 print(opt)
+for dfg in dfgs.values():
+    pm4py.view_dfg(*dfg)
 
-
+print("Tree Abstraction")
 dfgs,rel,div,con,defi,opt = get_tree_abstraction(ocpt)
 print(rel)
 print(div)
 print(con)
 print(defi)
 print(opt)
+for dfg in dfgs.values():
+    pm4py.view_dfg(*dfg)
 
 
 print(determine_conformance(ocpt,relations,10))
