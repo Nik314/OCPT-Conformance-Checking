@@ -19,16 +19,16 @@ def get_interaction_patterns(relations):
 
     for activity in relations["ocel:activity"].unique():
         sub_relations = relations[relations["ocel:activity"] == activity]
-
         for object_type in relations["ocel:type"].unique():
             sub_sub_relations = sub_relations[sub_relations["ocel:type"] == object_type]
-
             if sub_sub_relations["ocel:eid"].nunique() != sub_relations["ocel:eid"].nunique():
                 if not sub_sub_relations["ocel:eid"].nunique() > 0:
                     related_object_types[activity].remove(object_type)
                 else:
-                    if sub_sub_relations["ocel:eid"].nunique() < sub_relations["ocel:eid"].nunique():
+
+                    if object_type in related_object_types[activity] and sub_sub_relations["ocel:eid"].nunique() < sub_relations["ocel:eid"].nunique():
                         deficient_object_types[activity].add(object_type)
+
 
     for object_type in relations["ocel:type"].unique():
         identifiers[object_type] = identifiers["all"].apply(lambda
@@ -38,6 +38,8 @@ def get_interaction_patterns(relations):
     for object_type in relations["ocel:type"].unique():
         sub_identifiers = identifiers[identifiers[object_type] != set()]
         for activity in relations["ocel:activity"].unique():
+            if object_type not in related_object_types[activity]:
+                continue
             sub_sub_identifiers = sub_identifiers[sub_identifiers["activity"] == activity]
 
             matches = sub_sub_identifiers.groupby(object_type).apply(lambda frame: frame["all"].nunique())
@@ -49,4 +51,3 @@ def get_interaction_patterns(relations):
                 divergent_object_types[activity].add(object_type)
 
     return divergent_object_types,convergent_object_types,related_object_types, deficient_object_types
-

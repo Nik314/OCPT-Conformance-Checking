@@ -118,10 +118,10 @@ def get_tree_interaction_patterns(tree):
     object_types = tree.get_object_types()
 
     rel = {a:[ot for ot in object_types if ot in leaf_specification[(a,"rel")]] for a in activities}
-    div = {a:[ot for ot in object_types if ot in leaf_specification[(a,"div") or (ot in leaf_specification(a,"rel") and
-        Operator.LOOP in search_leaf_path(tree,a))]] for a in activities}
-    opt = {a:[ot for ot in object_types if ot in leaf_specification[(a,"div") or (ot in leaf_specification(a,"rel") and
-        Operator.XOR in search_leaf_path(tree,a))]] for a in activities}
+    div = {a:[ot for ot in object_types if ot in leaf_specification[(a,"div")] or (ot in leaf_specification[(a,"rel")] and
+        Operator.LOOP in search_leaf_path(tree,a)[0])] for a in activities}
+    opt = {a:[ot for ot in object_types if ot in leaf_specification[(a,"div")] or (ot in leaf_specification[(a,"rel")] and
+        Operator.XOR in search_leaf_path(tree,a)[0])] for a in activities}
     con = {a:[ot for ot in object_types if check_convergence(tree,a,ot,leaf_specification,opt,div)] for a in activities}
     defi = {a:[ot for ot in object_types if check_deficient(tree,a,ot,leaf_specification,opt,div)] for a in activities}
 
