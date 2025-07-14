@@ -12,8 +12,17 @@ import liss.localocpa.objects.log.importer.ocel.factory as factory
 from src import df2_miner_apply, convert_ocpt_to_ocpn
 from liss.main import *
 
+def print_stats():
+    for file_name in os.listdir("data"):
+        print(file_name)
 
+        try:
+            log = pm4py.read_ocel2("data/" + file_name)
+        except:
+            log = pm4py.read_ocel("data/" + file_name)
 
+        print(log.relations["ocel:oid"].nunique())
+        print(log.relations["ocel:eid"].nunique())
 
 def compare_values():
     result = pandas.DataFrame(columns=["log", "Fit Abstraction", "Fit Perspective", "Prec Abstraction", "PRec Perspective"])
@@ -162,6 +171,6 @@ budget = 3600
 #run_perspective(budget)
 #run_context(budget)
 #run_alignment(budget)
-compare_values()
-
+#compare_values()
+print_stats()
 
