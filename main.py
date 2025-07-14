@@ -18,7 +18,7 @@ from liss.main import *
 def compare_values():
     result = pandas.DataFrame(columns=["log", "Fit Abstraction", "Fit Perspective", "Prec Abstraction", "PRec Perspective"])
     for file_name in os.listdir("data"):
-        if "08" in file_name:
+        if any([ign in file_name for ign in ["08","09"]]):
             continue
         print(file_name)
         ocpt = df2_miner_apply("data/" + file_name)
