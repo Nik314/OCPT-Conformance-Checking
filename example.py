@@ -35,12 +35,21 @@ pack = LeafNode(activity="pack",related={"o","i","e"},divergent={"o","e"},conver
 refund = LeafNode(activity="refund",related={"o","i","e"},divergent={"o","e"},convergent={"i"},deficient=set())
 pickup = LeafNode(activity="pickup",related={"c","o","i","e"},divergent={"c","e"},convergent={"i"},deficient={"e"})
 
+
+
+
+
+
 ocpt = OperatorNode(Operator.SEQUENCE,[
     place,
     OperatorNode(Operator.PARALLEL,[pay,pack]),
     OperatorNode(Operator.XOR,[refund,pickup])
 ])
 
+determine_conformance(OperatorNode(Operator.PARALLEL,[pay,pack]),relations[relations["ocel:activity"].isin(["pay","pack"])],10)
+determine_conformance(OperatorNode(Operator.XOR,[pickup,refund]),relations[relations["ocel:activity"].isin(["pickup","refund"])],10)
+determine_conformance(ocpt,relations,10)
+exit()
 
 print("Log Abstraction")
 dfgs,rel,div,con,defi,opt = get_log_abstraction(relations)
@@ -64,5 +73,9 @@ for dfg in dfgs.values():
 
 
 print(determine_conformance(ocpt,relations,10))
+
+
+
+
 
 

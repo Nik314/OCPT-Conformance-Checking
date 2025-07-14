@@ -112,7 +112,7 @@ def check_deficient_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
 
 def get_tree_interaction_patterns(tree):
 
-    assert isinstance(tree,OperatorNode)
+    assert isinstance(tree,OperatorNode) or isinstance(tree,LeafNode)
     leaf_specification = tree.get_type_information()
     activities = [a for a in tree.get_activities() if a != "" and a != "tau"]
     object_types = tree.get_object_types()

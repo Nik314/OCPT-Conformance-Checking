@@ -2,12 +2,56 @@ import os
 import pandas
 import pm4py
 import time
-
+import numpy
+from src.log_abstraction import get_log_abstraction
+from src.tree_abstraction import get_tree_abstraction
+from src.conformance import get_fitness, get_precision
 from pm4py.algo.transformation.log_to_features.variants.trace_based import times_from_first_occurrence_activity_case
 
 import liss.localocpa.objects.log.importer.ocel.factory as factory
 from src import df2_miner_apply, convert_ocpt_to_ocpn
 from liss.main import *
+
+
+
+
+def compare_values():
+    result = pandas.DataFrame(columns=["log", "Fit Abstraction", "Fit Perspective", "Prec Abstraction", "PRec Perspective"])
+    for file_name in os.listdir("data"):
+        if "08" in file_name:
+            continue
+        print(file_name)
+        ocpt = df2_miner_apply("data/" + file_name)
+        ocpn = convert_ocpt_to_ocpn(ocpt)
+        print("Model Mined & Translated")
+
+        try:
+            log = pm4py.read_ocel2("data/" + file_name)
+        except:
+            log = pm4py.read_ocel("data/" + file_name)
+
+        log_abstraction = get_log_abstraction(log.relations)
+        tree_abstraction = get_tree_abstraction(ocpt)
+        fit_abstract = get_fitness(log_abstraction, tree_abstraction)
+        prec_abstract = get_precision(log_abstraction, tree_abstraction)
+
+        fit_perspective, prec_perspective = [],[]
+        for ot in log.relations["ocel:type"].unique():
+            net = ocpn.nets[ot]
+            sub_log = log.relations[log.relations["ocel:type"] == ot]
+
+            fit_perspective.append(pm4py.fitness_alignments(sub_log, petri_net=net[0], initial_marking=net[1], final_marking=net[2],
+                                     activity_key="ocel:activity", timestamp_key="ocel:timestamp",
+                                     case_id_key="ocel:oid")["averageFitness"])
+
+            prec_perspective.append(pm4py.precision_alignments(sub_log, petri_net=net[0], initial_marking=net[1], final_marking=net[2],
+                                       activity_key="ocel:activity", timestamp_key="ocel:timestamp",
+                                       case_id_key="ocel:oid"))
+
+
+        result.loc[result.shape[0]] = file_name, fit_abstract, numpy.mean(fit_perspective), prec_abstract, numpy.mean(prec_perspective)
+        result.to_csv("comparison.csv")
+
 
 
 def run_abstractions(budget):
@@ -117,6 +161,7 @@ budget = 3600
 #run_abstractions(budget)
 #run_perspective(budget)
 #run_context(budget)
-run_alignment(budget)
+#run_alignment(budget)
+compare_values()
 
 
