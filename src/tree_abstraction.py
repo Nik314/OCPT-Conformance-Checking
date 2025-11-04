@@ -6,7 +6,7 @@ from src.oc_process_trees import *
 def get_tree_abstraction(tree):
 
     rel,div,con,defi,opt = get_tree_interaction_patterns(tree)
-    dfgs = get_tree_dfgs(tree)
+    dfgs = get_tree_dfgs(tree, div)
     return dfgs,rel,div,con,defi,opt
 
 
@@ -51,7 +51,7 @@ def check_convergence_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
         return True
     if ot in leaf_specification[(tree.activity,"con")] or ot in opt[tree.activity]:
         return True
-    if ot2 in leaf_specification[(tree.activity,"def")] or ot in div[tree.activity]:
+    if ot2 in leaf_specification[(tree.activity,"def")] or ot2 in div[tree.activity]:
         return True
     return False
 
@@ -74,41 +74,22 @@ def check_deficient(tree,a,ot,leaf_spefication,opt,div):
 
 
 def check_deficient_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
+    if isinstance(tree,OperatorNode):
+        if tree.operator in [Operator.SEQUENCE,Operator.PARALLEL]:
+            return all([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
+        if tree.operator in [Operator.XOR]:
+            return any([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
+        if tree.operator in [Operator.LOOP]:
+            return check_convergence_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
 
-
-    def check_convergence(tree,a,ot,leaf_spefication,opt,div):
-        if ot not in leaf_spefication[(a,"con")]:
-            return False
-        if ot in leaf_spefication[(a,"def")] or ot in div[a]:
-            return True
-        problems = [ot2 for ot2 in leaf_spefication[(a,"rel")] if ot2 != ot and ot2 not in opt[a]
-                    and ot2 not in leaf_spefication[(a,"con")]]
-
-        result = True
-        for ot2 in problems:
-            result = result and check_convergence_recursion(tree,a,ot,ot2,leaf_spefication,opt,div)
-
-        return result
-
-
-    def check_convergence_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
-
-        if isinstance(tree,OperatorNode):
-            if tree.operator in [Operator.SEQUENCE,Operator.PARALLEL]:
-                return all([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-            if tree.operator in [Operator.XOR]:
-                return any([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-            if tree.operator in [Operator.LOOP]:
-                return check_convergence_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
-
-        assert isinstance(tree,LeafNode)
-        if tree.activity == "" or tree.activity =="tau":
-            return True
-        if ot in leaf_specification[(tree.activity,"con")] or ot in opt[tree.activity]:
-            return True
-        if ot2 in leaf_specification[(tree.activity,"def")] or ot in opt[tree.activity]:
-            return True
-        return False
+    assert isinstance(tree,LeafNode)
+    if tree.activity == "" or tree.activity =="tau":
+        return True
+    if ot in leaf_specification[(tree.activity,"def")] or ot in div[tree.activity]:
+        return True
+    if ot2 in leaf_specification[(tree.activity,"con")] or ot2 in opt[tree.activity]:
+        return True
+    return False
 
 def get_tree_interaction_patterns(tree):
 
@@ -128,13 +109,13 @@ def get_tree_interaction_patterns(tree):
     return rel,div,con,defi,opt
 
 
-def get_tree_dfgs(tree):
-    return {ot:dfg_recursion(project_ocpt(tree,ot))[:3] for ot in tree.get_object_types()}
+def get_tree_dfgs(tree, div):
+    return {ot:dfg_recursion(project_ocpt(tree,ot), div, ot)[:3] for ot in tree.get_object_types()}
 
 
-def dfg_recursion(pt):
+def dfg_recursion(pt, div, ot):
     if pt.operator == Operator.SEQUENCE:
-        sub_dfgs = [dfg_recursion(sub) for sub in pt.children]
+        sub_dfgs = [dfg_recursion(sub, div, ot) for sub in pt.children]
         dfg,start,end,optional,sigma= {},{},{},True,[]
         try:
             first_non_optional = min([i for i in range(0,len(sub_dfgs)) if not sub_dfgs[i][3]])
@@ -152,15 +133,15 @@ def dfg_recursion(pt):
             if i <= first_non_optional:
                 start.update(sub_start)
             if i >= last_non_optional:
-                end.update(sub_start)
+                end.update(sub_end)
             if i < len(sub_dfgs)-1:
-                new_rules = {(a,b):1 for a in sub_end for b in sub_dfgs[i+1][2]}
+                new_rules = {(a,b):1 for a in sub_end for b in sub_dfgs[i+1][1]}
                 dfg.update(new_rules)
             optional = optional and sub_optional
         return dfg,start,end,optional,sigma
 
     elif pt.operator == Operator.XOR:
-        sub_dfgs = [dfg_recursion(sub) for sub in pt.children]
+        sub_dfgs = [dfg_recursion(sub, div, ot) for sub in pt.children]
         dfg, start, end, optional, sigma = {}, {}, {}, False, []
 
         for i in range(0,len(sub_dfgs)):
@@ -168,13 +149,13 @@ def dfg_recursion(pt):
             dfg.update(sub_dfg)
             sigma += sub_sigma
             start.update(sub_start)
-            end.update(sub_start)
+            end.update(sub_end)
             optional = optional or sub_optional
 
         return dfg,start,end,optional,sigma
 
     elif pt.operator == Operator.PARALLEL:
-        sub_dfgs = [dfg_recursion(sub) for sub in pt.children]
+        sub_dfgs = [dfg_recursion(sub, div, ot) for sub in pt.children]
         dfg, start, end, optional, sigma = {}, {}, {}, False, []
 
         for i in range(0, len(sub_dfgs)):
@@ -182,7 +163,7 @@ def dfg_recursion(pt):
             dfg.update(sub_dfg)
             sigma += sub_sigma
             start.update(sub_start)
-            end.update(sub_start)
+            end.update(sub_end)
             optional = optional or sub_optional
 
             for j in range(i+1,len(sub_dfgs)):
@@ -196,16 +177,17 @@ def dfg_recursion(pt):
 
     elif pt.operator == Operator.LOOP:
 
-        sub_dfgs = [dfg_recursion(sub) for sub in pt.children]
+        sub_dfgs = [dfg_recursion(sub, div, ot) for sub in pt.children]
         dfg, start, end, optional, sigma = {}, {}, {}, sub_dfgs[0][3], []
+
+        other_optional = False
 
         for i in range(0, len(sub_dfgs)):
             sub_dfg, sub_start, sub_end, sub_optional, sub_sigma = sub_dfgs[i]
             dfg.update(sub_dfg)
             sigma += sub_sigma
+            other_optional = other_optional or sub_optional
 
-        start.update(sub_dfgs[0][1])
-        end.update(sub_dfgs[0][2])
 
         for i in range(1, len(sub_dfgs)):
             if optional:
@@ -217,8 +199,17 @@ def dfg_recursion(pt):
             newrules = {(a,b):1 for a in sub_dfgs[i][2] for b in sub_dfgs[0][1] }
             dfg.update(newrules)
 
-        newrules = {(a, b): 1 for a in end.keys() for b in start.keys()}
-        dfg.update(newrules)
+        if optional:
+            newrules = {(a, b): 1 for a in end.keys() for b in start.keys()}
+            dfg.update(newrules)
+
+        start.update(sub_dfgs[0][1])
+        end.update(sub_dfgs[0][2])
+
+        if other_optional:
+            newrules = {(a, b): 1 for a in sub_dfgs[0][2] for b in sub_dfgs[0][1]}
+            dfg.update(newrules)
+
         return dfg, start, end, optional, sigma
 
     else:
@@ -228,4 +219,8 @@ def dfg_recursion(pt):
             end[pt.label] = 1
             optional = False
             sigma = [pt.label]
+
+            if ot in div[pt.label]:
+                dfg.update({(pt.label, pt.label):1})
+
         return dfg,start,end,optional,sigma
