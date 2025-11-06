@@ -16,14 +16,15 @@ from pm4py.objects.process_tree.obj import ProcessTree,Operator
 
 def project_ocpt(ocpt,object_type):
 
-
-
     if isinstance(ocpt,LeafNode):
         if ocpt.activity == "" or object_type not in ocpt.related:
             return ProcessTree()
         return ProcessTree(label=ocpt.activity)
 
     assert isinstance(ocpt,OperatorNode)
+    if len(ocpt.subtrees) == 1:
+        return project_ocpt(ocpt.subtrees[0],object_type)
+
     related_activities = set([a for a in ocpt.get_activities()
         if object_type in ocpt.get_type_information()[(a,"rel")] and a != ""])
 

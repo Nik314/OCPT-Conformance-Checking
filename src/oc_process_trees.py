@@ -37,7 +37,7 @@ class LeafNode:
         return set(sum([list(value) for value in self.get_type_information().values()],[]))
 
     def get_activities(self):
-        return {self.activity}
+        return {self.activity} if self.activity != '' else set()
 
     def get_unique_relations(self):
         return set()

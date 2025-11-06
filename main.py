@@ -6,8 +6,6 @@ import numpy
 from src.log_abstraction import get_log_abstraction
 from src.tree_abstraction import get_tree_abstraction
 from src.conformance import get_fitness, get_precision
-from pm4py.algo.transformation.log_to_features.variants.trace_based import times_from_first_occurrence_activity_case
-
 import liss.localocpa.objects.log.importer.ocel.factory as factory
 from src import df2_miner_apply, convert_ocpt_to_ocpn
 from liss.main import *
@@ -24,6 +22,11 @@ def print_stats():
         print(log.relations["ocel:oid"].nunique())
         print(log.relations["ocel:eid"].nunique())
 
+    result =  pandas.read_csv("comparison.csv")
+    print(numpy.corrcoef(result["Fit Abstraction"],result["Fit Perspective"]))
+    print(numpy.corrcoef(result["Prec Abstraction"],result["Prec Perspective"]))
+
+
 def compare_values():
     result = pandas.DataFrame(columns=["log", "Fit Abstraction", "Fit Perspective", "Prec Abstraction", "PRec Perspective"])
     for file_name in os.listdir("data"):
@@ -39,8 +42,8 @@ def compare_values():
         except:
             log = pm4py.read_ocel("data/" + file_name)
 
-        log_abstraction = get_log_abstraction(log.relations)
-        tree_abstraction = get_tree_abstraction(ocpt)
+        log_abstraction,_ = get_log_abstraction(log.relations)
+        tree_abstraction,_ = get_tree_abstraction(ocpt)
         fit_abstract = get_fitness(log_abstraction, tree_abstraction)
         prec_abstract = get_precision(log_abstraction, tree_abstraction)
 
@@ -68,8 +71,7 @@ def run_abstractions(budget):
     for file_name in os.listdir("data"):
 
         print(file_name)
-        ocpt = df2_miner_apply("data/"+file_name)
-        ocpn = convert_ocpt_to_ocpn(ocpt)
+        eocpt = df2_miner_apply("data/"+file_name,ident=True)
         print("Model Mined & Translated")
 
         try:
@@ -79,10 +81,11 @@ def run_abstractions(budget):
 
         from src.conformance import determine_conformance
         start = time.time()
-        timeouts = determine_conformance(ocpt,log.relations,(start+budget))
+        timeouts,time_distribution = determine_conformance(eocpt,log.relations,(start+budget))
         runtime_me = min(time.time() -start,budget)
         timeout_me = timeouts
         print("Abstraction-Based Done In "+str(runtime_me) +" Seconds With Timeout On " +str(timeout_me) +" Of Events")
+        print(time_distribution)
         result.loc[result.shape[0]] = file_name,runtime_me,timeout_me
     result.to_csv("result_abstraction.csv")
 
@@ -167,8 +170,9 @@ def run_alignment(budget):
 
 
 budget = 3600
-#run_abstractions(budget)
+run_abstractions(budget)
 #run_perspective(budget)
+#Note that these approaches mostly time out like crazy (even on strong hardware and 24h)
 #run_context(budget)
 #run_alignment(budget)
 #compare_values()

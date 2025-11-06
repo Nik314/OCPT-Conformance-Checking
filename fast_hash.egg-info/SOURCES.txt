@@ -1,0 +1,6 @@
+fast_hash.c
+setup.py
+fast_hash.egg-info/PKG-INFO
+fast_hash.egg-info/SOURCES.txt
+fast_hash.egg-info/dependency_links.txt
+fast_hash.egg-info/top_level.txt

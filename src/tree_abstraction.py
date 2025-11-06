@@ -1,14 +1,37 @@
+import time
+
 import pm4py
 from src.ocpn_conversion import project_ocpt
 from src.oc_process_trees import *
 
 
 def get_tree_abstraction(tree):
-
+    timestats = {}
+    start = time.time()
     rel,div,con,defi,opt = get_tree_interaction_patterns(tree)
+    timestats["Multiplicity"] = time.time() -start
+    start = time.time()
     dfgs = get_tree_dfgs(tree)
-    return dfgs,rel,div,con,defi,opt
+    timestats["Control"] = time.time() -start
+    start = time.time()
+    ident = set(recurse_tree_relation_pattern(tree,rel,[]))
+    timestats["Identity"] = time.time() -start
+    return (dfgs,rel,div,con,defi,opt,ident),timestats
 
+
+def recurse_tree_relation_pattern(tree,rel,current_relation):
+    if isinstance(tree,OperatorNode) and len(tree.subtrees) == 1:
+        new_implications = []
+        ot1,ot2 = tree.operator
+        for a in tree.get_activities():
+            for b in tree.get_activities():
+                if a and b and a != b and ot1 in rel[a] and ot2 in rel[a] and ot1 in rel[b] and ot2 in rel[b]:
+                    new_implications.append((ot1,ot2,a,b))
+        return new_implications + recurse_tree_relation_pattern(tree.subtrees[0],rel,current_relation)
+    elif isinstance(tree,OperatorNode) and len(tree.subtrees) > 1:
+        return sum([recurse_tree_relation_pattern(sub,rel,current_relation) for sub in tree.subtrees],[])
+    else:
+        return []
 
 def search_leaf_path(tree,a):
     if isinstance(tree,OperatorNode):
@@ -41,9 +64,11 @@ def check_convergence_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
     if isinstance(tree,OperatorNode):
         if tree.operator in [Operator.SEQUENCE,Operator.PARALLEL]:
             return all([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-        if tree.operator in [Operator.XOR]:
+        elif tree.operator in [Operator.XOR]:
             return any([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-        if tree.operator in [Operator.LOOP]:
+        elif tree.operator in [Operator.LOOP]:
+            return check_convergence_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
+        else:
             return check_convergence_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
 
     assert isinstance(tree,LeafNode)
@@ -74,41 +99,25 @@ def check_deficient(tree,a,ot,leaf_spefication,opt,div):
 
 
 def check_deficient_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
+    if isinstance(tree,OperatorNode):
+        if tree.operator in [Operator.SEQUENCE,Operator.PARALLEL]:
+            return all([check_deficient_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
+        elif tree.operator in [Operator.XOR]:
+            return any([check_deficient_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
+        elif tree.operator in [Operator.LOOP]:
+            return check_deficient_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
+        else:
+            return check_deficient_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
 
+    assert isinstance(tree,LeafNode)
+    if tree.activity == "" or tree.activity =="tau":
+        return True
+    if ot in leaf_specification[(tree.activity,"def")] or ot in opt[tree.activity]:
+        return True
+    if ot2 in leaf_specification[(tree.activity,"con")] or ot in div[tree.activity]:
+        return True
+    return False
 
-    def check_convergence(tree,a,ot,leaf_spefication,opt,div):
-        if ot not in leaf_spefication[(a,"con")]:
-            return False
-        if ot in leaf_spefication[(a,"def")] or ot in div[a]:
-            return True
-        problems = [ot2 for ot2 in leaf_spefication[(a,"rel")] if ot2 != ot and ot2 not in opt[a]
-                    and ot2 not in leaf_spefication[(a,"con")]]
-
-        result = True
-        for ot2 in problems:
-            result = result and check_convergence_recursion(tree,a,ot,ot2,leaf_spefication,opt,div)
-
-        return result
-
-
-    def check_convergence_recursion(tree,a,ot,ot2, leaf_specification,opt,div):
-
-        if isinstance(tree,OperatorNode):
-            if tree.operator in [Operator.SEQUENCE,Operator.PARALLEL]:
-                return all([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-            if tree.operator in [Operator.XOR]:
-                return any([check_convergence_recursion(sub,a,ot,ot2,leaf_specification,opt,div) for sub in tree.subtrees])
-            if tree.operator in [Operator.LOOP]:
-                return check_convergence_recursion(tree.subtrees[0],a,ot,ot2,leaf_specification,opt,div)
-
-        assert isinstance(tree,LeafNode)
-        if tree.activity == "" or tree.activity =="tau":
-            return True
-        if ot in leaf_specification[(tree.activity,"con")] or ot in opt[tree.activity]:
-            return True
-        if ot2 in leaf_specification[(tree.activity,"def")] or ot in opt[tree.activity]:
-            return True
-        return False
 
 def get_tree_interaction_patterns(tree):
 
