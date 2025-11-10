@@ -19,16 +19,11 @@ def df2_miner_apply(log_path,ident=False):
         input_log = pm4py.read_ocel(log_path).relations
 
     div, con, rel, defi = get_interaction_patterns(input_log)
-    print("Interacting Properties Done")
     df2_graph = get_divergence_free_graph(input_log,div,rel)
-    print("DF2 Graph Done")
     process_tree = pm4py.discover_process_tree_inductive(df2_graph, noise_threshold=0.2)
-    print("Traditional Process Tree Done")
     ocpt = load_from_pt(process_tree,rel,div,con,defi)
-    print("Object-Centric Process Tree Done")
     if ident:
         extended_ocpt = get_extended_ocpt(ocpt, input_log)
-        print("Identity Relations Done")
         format_tree = reformat_tree(extended_ocpt)
         return format_tree
     return ocpt

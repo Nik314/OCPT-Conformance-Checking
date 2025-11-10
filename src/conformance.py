@@ -1,19 +1,23 @@
 import numpy
 from src.log_abstraction import get_log_abstraction
 from src.tree_abstraction import get_tree_abstraction
-
+import time
 
 def determine_conformance(ocpt, relations,timeout):
 
     tree_abstraction,timestat_tree = get_tree_abstraction(ocpt)
     log_abstraction,timestats_log = get_log_abstraction(relations)
+    start = time.time()
+    fit = get_fitness(log_abstraction,tree_abstraction)
+    pre = get_precision(log_abstraction,tree_abstraction)
+    end = time.time() - start
+    print(fit)
+    print(pre)
+
     total = {key:value+timestat_tree[key] for key,value in timestats_log.items()}
+    total["Overhead"] = end
     total = {key:value/sum(total.values()) for key,value in total.items()}
-    print(get_fitness(log_abstraction,tree_abstraction))
-    print(get_precision(log_abstraction,tree_abstraction))
     return 0.0,total
-
-
 
 
 
@@ -44,15 +48,16 @@ def get_patterns(log_abstraction,tree_abstraction):
             for a in total_activities for ot in object_types for i in range(0,5)]
 
     identity_patterns_log = [not (ot1,ot2,a,b) in log_ident for a in total_activities
-            for b in total_activities for ot1 in object_types for ot2 in object_types]
+            for b in total_activities for ot1 in object_types for ot2 in object_types if a!=b and ot1 != ot2
+            and ot1 in log_rel[a] and ot2 in log_rel[a] and ot1 in log_rel[b] and ot2 in log_rel[b]]
 
     multiplicity_patterns_tree = [a in (tree_rel,tree_div,tree_defi,tree_con,tree_opt)[i] and
             ot in (tree_rel,tree_div,tree_defi,tree_con,tree_opt)[i][a]
             for a in total_activities for ot in object_types for i in range(0,5)]
 
     identity_patterns_tree = [not (ot1,ot2,a,b) in tree_ident for a in total_activities
-            for b in total_activities for ot1 in object_types for ot2 in object_types]
-
+            for b in total_activities for ot1 in object_types for ot2 in object_types if a!=b and ot1 != ot2
+            and ot1 in tree_rel[a] and ot2 in tree_rel[a] and ot1 in tree_rel[b] and ot2 in tree_rel[b]]
 
     return ((control_patterns_log,multiplicity_patterns_log,identity_patterns_log),
             (control_patterns_tree,multiplicity_patterns_tree,identity_patterns_tree))
@@ -75,7 +80,7 @@ def get_fitness(log_abstraction, tree_abstraction):
             if log_value[j] and tree_value[j]:
                 fitting += 1
         result.append(fitting/total if total else 1.0)
-    print(result)
+    return result
 
 def get_precision(log_abstraction, tree_abstraction):
 
@@ -91,4 +96,4 @@ def get_precision(log_abstraction, tree_abstraction):
             if log_value[j] and tree_value[j]:
                 precise += 1
         result.append(precise/total if total else 1.0)
-    print(result)
+    return result

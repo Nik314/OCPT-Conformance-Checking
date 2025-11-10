@@ -1,6 +1,7 @@
 import time
 
 import pm4py
+import networkx
 from src.ocpn_conversion import project_ocpt
 from src.oc_process_trees import *
 
@@ -15,8 +16,17 @@ def get_tree_abstraction(tree):
     timestats["Control"] = time.time() -start
     start = time.time()
     ident = set(recurse_tree_relation_pattern(tree,rel,[]))
+    ident = close_tree_ident(ident)
     timestats["Identity"] = time.time() -start
     return (dfgs,rel,div,con,defi,opt,ident),timestats
+
+
+def close_tree_ident(ident):
+
+    activity_pairs = [(a,b) for ot1,ot2,a,b in ident]
+    activity_pair_dict = {(a,b):[(ot1,ot2) for ot1,ot2,c,d in ident if (c,d) == (a,b)] for (a,b) in activity_pairs}
+    closure = {key:networkx.transitive_closure(networkx.DiGraph(value)).edges for key,value in activity_pair_dict.items()}
+    return set([(ot1,ot2,a,b) for (a,b) in closure.keys() for (ot1,ot2) in closure[(a,b)]])
 
 
 def recurse_tree_relation_pattern(tree,rel,current_relation):

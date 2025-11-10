@@ -3,36 +3,45 @@ import time
 from src.oc_process_trees import LeafNode,OperatorNode
 import hashlib
 import fast_hash
+import pandas
 
 
+def check_relation_log(ot1, ot2, relations):
 
-def check_relation_log(ot1, ot2, a, b, relations):
+    activities = relations["ocel:activity"].unique()
+    result = []
+    activity_groups = {act: relations[relations["ocel:activity"] == act] for act in activities}
 
-    relations = relations[(relations["ocel:type"].isin([ot1,ot2])) & (relations["ocel:activity"].isin([a,b]))]
+    for a in activities:
+        for b in activities:
+            if a == b:
+                continue
+            subrelations = pandas.concat([activity_groups[a], activity_groups[b]], ignore_index=True)
+            #hash_map = relations.groupby("ocel:eid").apply(lambda frame:
+            #    int(hashlib.md5(str(sorted(frame["ocel:oid"].unique())).encode("utf_8")).hexdigest(), 16)).to_dict()
+            hash_map = fast_hash.compute_hash_map(subrelations["ocel:eid"].values,
+                                                  subrelations["ocel:oid"].values)
+            subrelations["hash"] = subrelations["ocel:eid"].map(hash_map)
 
-    if not ot1 in relations["ocel:type"].unique() and ot2 in relations["ocel:type"].unique():
-        return False
-    if not a in relations["ocel:activity"].unique() and b in relations["ocel:activity"].unique():
-        return False
-
-    #hash_map = relations.groupby("ocel:eid").apply(lambda frame:
-    #    int(hashlib.md5(str(sorted(frame["ocel:oid"].unique())).encode("utf_8")).hexdigest(), 16)).to_dict()
-    hash_map = fast_hash.compute_hash_map(relations["ocel:eid"].values,
-                                          relations["ocel:oid"].values)
-
-    relations["hash"] = relations["ocel:eid"].apply(lambda eid: hash_map[eid])
-
-    result = relations.groupby("ocel:oid").nunique()["hash"].max() == 1 or \
-        relations[relations["ocel:type"].isin([ot1])].groupby("ocel:oid").nunique()["hash"].max() == 1
+            grouped_hash_counts = subrelations.groupby("ocel:oid")["hash"].nunique()
+            check1 = grouped_hash_counts.max() == 1
+            grouped_ot1 = subrelations.loc[subrelations["ocel:type"] == ot1].groupby("ocel:oid")["hash"].nunique()
+            check2 = grouped_ot1.max() == 1
+            check = check1 or check2
+            #check = subrelations.groupby("ocel:oid").nunique()["hash"].max() == 1 or \
+            #    subrelations[subrelations["ocel:type"].isin([ot1])].groupby("ocel:oid").nunique()["hash"].max() == 1
+            if check:
+                result.append((ot1,ot2,a,b))
     return result
 
 
 
 def check_relation(ot1, ot2, relations):
 
-
-    hash_map = relations.groupby("ocel:eid").apply(lambda frame:
-        int(hashlib.md5(str(sorted(list(frame["ocel:oid"].unique()))).encode("utf_8")).hexdigest(), 16)).to_dict()
+    #hash_map = relations.groupby("ocel:eid").apply(lambda frame:
+    #    int(hashlib.md5(str(sorted(list(frame["ocel:oid"].unique()))).encode("utf_8")).hexdigest(), 16)).to_dict()
+    hash_map = fast_hash.compute_hash_map(relations["ocel:eid"].values,
+                                          relations["ocel:oid"].values)
 
     relations["hash"] = relations["ocel:eid"].apply(lambda eid: hash_map[eid])
 
