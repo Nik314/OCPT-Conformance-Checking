@@ -49,7 +49,11 @@ def get_patterns(log_abstraction,tree_abstraction):
 
     identity_patterns_log = [not (ot1,ot2,a,b) in log_ident for a in total_activities
             for b in total_activities for ot1 in object_types for ot2 in object_types if a!=b and ot1 != ot2
-            and ot1 in log_rel[a] and ot2 in log_rel[a] and ot1 in log_rel[b] and ot2 in log_rel[b]]
+            and ((a in log_rel.keys() and b in log_rel.keys() and ot1 in log_rel[a] and ot2 in log_rel[a]
+                 and ot1 in log_rel[b] and ot2 in log_rel[b]) or
+                             (a in tree_rel.keys() and ot1 in tree_rel[a] and ot2 in tree_rel[
+                                 a] and b in tree_rel.keys()
+                              and ot1 in tree_rel[b] and ot2 in tree_rel[b]))]
 
     multiplicity_patterns_tree = [a in (tree_rel,tree_div,tree_defi,tree_con,tree_opt)[i] and
             ot in (tree_rel,tree_div,tree_defi,tree_con,tree_opt)[i][a]
@@ -57,7 +61,11 @@ def get_patterns(log_abstraction,tree_abstraction):
 
     identity_patterns_tree = [not (ot1,ot2,a,b) in tree_ident for a in total_activities
             for b in total_activities for ot1 in object_types for ot2 in object_types if a!=b and ot1 != ot2
-            and ot1 in tree_rel[a] and ot2 in tree_rel[a] and ot1 in tree_rel[b] and ot2 in tree_rel[b]]
+                 and ((a in log_rel.keys() and b in log_rel.keys() and ot1 in log_rel[a] and ot2 in log_rel[a]
+                       and ot1 in log_rel[b] and ot2 in log_rel[b]) or
+                      (a in tree_rel.keys() and ot1 in tree_rel[a] and ot2 in tree_rel[
+                          a] and b in tree_rel.keys()
+                       and ot1 in tree_rel[b] and ot2 in tree_rel[b]))]
 
     return ((control_patterns_log,multiplicity_patterns_log,identity_patterns_log),
             (control_patterns_tree,multiplicity_patterns_tree,identity_patterns_tree))

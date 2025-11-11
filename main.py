@@ -24,14 +24,11 @@ def print_stats():
         print(log.relations["ocel:oid"].nunique())
         print(log.relations["ocel:eid"].nunique())
 
-    result =  pandas.read_csv("comparison.csv")
-    print(numpy.corrcoef(result["Fit Abstraction"],result["Fit Perspective"]))
-    print(numpy.corrcoef(result["Prec Abstraction"],result["Prec Perspective"]))
-
 
 def compare_values():
     result = pandas.DataFrame(columns=["log", "Fit Abstraction", "Fit Perspective", "Prec Abstraction", "PRec Perspective"])
     for file_name in os.listdir("data"):
+        #those timed out on the perspective
         if any([ign in file_name for ign in ["08","09"]]):
             continue
         print(file_name)
@@ -69,7 +66,7 @@ def compare_values():
 
 
 def run_abstractions(budget):
-    result = pandas.DataFrame(columns=["log", "time","percentage","control","multiplicity","identity","overhead"])
+    result = pandas.DataFrame(columns=["log", "time no ids","percentage","control","multiplicity","identity","overhead"])
     for file_name in os.listdir("data"):
 
         print(file_name)
@@ -89,6 +86,7 @@ def run_abstractions(budget):
         print("Abstraction-Based Done In "+str(runtime_me) +" Seconds With Timeout On " +str(timeout_me) +" Of Events")
         print(time_distribution)
         result.loc[result.shape[0]] = file_name,runtime_me,timeout_me,time_distribution["Control"],time_distribution["Multiplicity"],time_distribution["Identity"],time_distribution["Overhead"]
+    result["time with ids"] = result["time no ids"]*(1-result["identity"])
     result.to_csv("result_abstraction.csv")
 
 
@@ -175,10 +173,14 @@ if __name__ == "__main__":
     budget = 3600
     run_abstractions(budget)
 
-    #run_perspective(budget)
     #Note that these approaches mostly time out like crazy (even on strong hardware and 24h)
+    #run_perspective(budget)
     #run_context(budget)
     #run_alignment(budget)
-    #compare_values()
+
+    #print stats of the logs
     #print_stats()
+
+    #compare conformance values
+    #compare_values()
 
