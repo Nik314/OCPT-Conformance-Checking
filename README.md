@@ -57,7 +57,7 @@ OCPT-Conformance-Checking/
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/Nik314/OCPT-Conformance-Checking.git
+   git clonelink-to-repo
    cd OCPT-Conformance-Checking
    ```
 
